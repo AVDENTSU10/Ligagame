@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hall of Fame · La Liga</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #0a0a14; color: #fff; min-height: 100vh; padding: 1.5rem; }
+  h1 { font-size: 1.8rem; font-weight: 700; text-align: center; color: #fff; margin-bottom: 0.25rem; }
+  .subtitle { text-align: center; font-size: 0.9rem; color: #888; margin-bottom: 1.5rem; }
+  .budget-bar { background: #161625; border: 1px solid #2a2a45; border-radius: 12px; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+  .b-item { text-align: center; }
+  .b-label { font-size: 0.75rem; color: #888; margin-bottom: 0.2rem; }
+  .b-value { font-size: 1.3rem; font-weight: 700; color: #fff; }
+  .b-value.ok { color: #4ade80; }
+  .b-value.warn { color: #f59e0b; }
+  .b-value.danger { color: #f87171; }
+  .main { display: flex; gap: 1.5rem; }
+  .pitch-wrap { flex: 1; }
+  .pitch { background: linear-gradient(180deg, #1a6b35 0%, #1d7a3c 50%, #1a6b35 100%); border-radius: 14px; padding: 1rem; min-height: 460px; position: relative; border: 2px solid #2d9d55; display: flex; flex-direction: column; justify-content: space-around; }
+  .pitch-lines { position: absolute; inset: 12px; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; pointer-events: none; }
+  .pitch-center { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 60px; height: 60px; border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; pointer-events: none; }
+  .pitch-midline { position: absolute; left: 12px; right: 12px; top: 50%; height: 1px; background: rgba(255,255,255,0.15); pointer-events: none; }
+  .formation-row { display: flex; justify-content: center; gap: 8px; position: relative; z-index: 1; }
+  .slot { width: 78px; text-align: center; }
+  .slot-pos { font-size: 9px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+  .slot-circle { width: 52px; height: 52px; border-radius: 50%; margin: 0 auto 5px; display: flex; align-items: center; justify-content: center; border: 2px dashed rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); cursor: pointer; transition: all 0.2s; font-size: 22px; position: relative; }
+  .slot-circle.filled { border-style: solid; border-color: rgba(255,255,255,0.7); }
+  .slot-circle:hover { transform: scale(1.08); }
+  .slot-circle .remove { position: absolute; top: -5px; right: -5px; width: 18px; height: 18px; background: #ef4444; border-radius: 50%; font-size: 11px; display: none; align-items: center; justify-content: center; cursor: pointer; color: #fff; font-weight: 700; z-index: 2; }
+  .slot:hover .remove { display: flex; }
+  .slot-name { font-size: 10px; color: #fff; font-weight: 600; line-height: 1.2; min-height: 26px; display: flex; align-items: center; justify-content: center; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+  .slot-price { font-size: 9px; color: rgba(255,255,255,0.6); }
+  .sidebar { width: 290px; display: flex; flex-direction: column; gap: 0.75rem; }
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; }
+  .f-btn { font-size: 12px; padding: 5px 12px; border-radius: 20px; border: 1px solid #2a2a45; background: #161625; color: #aaa; cursor: pointer; transition: all 0.15s; }
+  .f-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+  .search { width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #2a2a45; background: #161625; color: #fff; font-size: 13px; outline: none; }
+  .search:focus { border-color: #2563eb; }
+  .list { overflow-y: auto; max-height: 360px; display: flex; flex-direction: column; gap: 5px; }
+  .list::-webkit-scrollbar { width: 4px; }
+  .list::-webkit-scrollbar-thumb { background: #2a2a45; border-radius: 2px; }
+  .pcard { background: #161625; border: 1px solid #2a2a45; border-radius: 10px; padding: 8px 10px; display: flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.15s; }
+  .pcard:hover { border-color: #2563eb; background: #1a1a35; }
+  .pcard.selected { border-color: #4ade80; background: #0f1f18; }
+  .pcard.disabled { opacity: 0.35; cursor: not-allowed; }
+  .pcard-emoji { font-size: 22px; width: 28px; text-align: center; }
+  .pcard-info { flex: 1; }
+  .pcard-name { font-size: 12px; font-weight: 600; color: #fff; }
+  .pcard-meta { font-size: 10px; color: #888; }
+  .pcard-right { text-align: right; }
+  .pcard-price { font-size: 12px; font-weight: 700; color: #60a5fa; }
+  .pcard-rating { font-size: 10px; color: #888; background: #0d0d1e; border-radius: 4px; padding: 1px 5px; margin-top: 2px; }
+  .bottom { margin-top: 1rem; display: flex; gap: 0.75rem; align-items: center; }
+  .stat-box { background: #161625; border: 1px solid #2a2a45; border-radius: 10px; padding: 0.75rem 1rem; flex: 1; text-align: center; }
+  .stat-num { font-size: 1.4rem; font-weight: 700; }
+  .stat-label { font-size: 11px; color: #888; margin-bottom: 4px; }
+  .share-btn { padding: 10px 20px; background: linear-gradient(135deg, #2563eb, #7c3aed); color: #fff; border: none; border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 700; white-space: nowrap; transition: all 0.2s; }
+  .share-btn:hover { opacity: 0.9; transform: scale(1.02); }
+  .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: #161625; border: 1px solid #2a2a45; border-radius: 10px; padding: 0.75rem 1.5rem; font-size: 13px; color: #fff; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 999; }
+  .toast.show { opacity: 1; }
+  .era-badge { font-size: 9px; padding: 1px 6px; border-radius: 4px; margin-left: 4px; }
+  .era-leyenda { background: #7c3aed33; color: #a78bfa; }
+  .era-clasico { background: #0369a133; color: #38bdf8; }
+  .era-actual { background: #15803d33; color: #4ade80; }
+</style>
+</head>
+<body>
+
+<h1>⚽ Hall of Fame · La Liga</h1>
+<p class="subtitle">Tienes 500.000.000 € — Construye el mejor XI de la historia</p>
+
+<div class="budget-bar">
+  <div class="b-item">
+    <div class="b-label">Presupuesto disponible</div>
+    <div class="b-value ok" id="budgetLeft">500.000.000 €</div>
+  </div>
+  <div class="b-item">
+    <div class="b-label">Gastado</div>
+    <div class="b-value" id="budgetSpent">0 €</div>
+  </div>
+  <div class="b-item">
+    <div class="b-label">Valoración media</div>
+    <div class="b-value" id="teamRating" style="color:#f59e0b;">—</div>
+  </div>
+  <div class="b-item">
+    <div class="b-label">Jugadores</div>
+    <div class="b-value" id="playerCount">0 / 11</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="pitch-wrap">
+    <div class="pitch" id="pitch">
+      <div class="pitch-lines"></div>
+      <div class="pitch-midline"></div>
+      <div class="pitch-center"></div>
+      <div id="formation"></div>
+    </div>
+  </div>
+  <div class="sidebar">
+    <div class="filters" id="posFilters">
+      <button class="f-btn active" data-pos="ALL">Todos</button>
+      <button class="f-btn" data-pos="POR">🧤 Portero</button>
+      <button class="f-btn" data-pos="DEF">🛡️ Defensa</button>
+      <button class="f-btn" data-pos="MED">🎯 Medio</button>
+      <button class="f-btn" data-pos="DEL">⚽ Delantero</button>
+    </div>
+    <div class="filters" id="eraFilters">
+      <button class="f-btn" data-era="ALL" style="border-color:#555;">Todas las eras</button>
+      <button class="f-btn era-badge era-leyenda" data-era="Leyenda">Leyenda</button>
+      <button class="f-btn era-badge era-clasico" data-era="Clásico">Clásico</button>
+      <button class="f-btn era-badge era-actual" data-era="Actual">Actual</button>
+    </div>
+    <input class="search" type="text" id="searchBox" placeholder="🔍  Buscar jugador o club...">
+    <div class="list" id="playersList"></div>
+  </div>
+</div>
+
+<div class="bottom">
+  <div class="stat-box">
+    <div class="stat-label">Mi XI</div>
+    <div class="stat-num" id="teamRating2" style="color:#f59e0b;">⭐ —</div>
+  </div>
+  <div class="stat-box" style="flex:3; text-align:left;">
+    <div class="stat-label">Equipo</div>
+    <div style="font-size:12px; font-weight:600; color:#ccc;" id="teamPreview">Selecciona 11 jugadores para completar tu XI</div>
+  </div>
+  <button class="share-btn" onclick="shareTeam()">🏆 Ver análisis ↗</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const BUDGET = 500000000;
+
+const POS_COLOR = { POR:'#f59e0b', DEF:'#3b82f6', MED:'#10b981', DEL:'#ef4444' };
+
+const PLAYERS = [
+  {id:1, name:'Iker Casillas', emoji:'🧤', club:'Real Madrid', era:'Clásico', pos:'POR', price:55e6, rating:95, nation:'🇪🇸', years:'1999–2015'},
+  {id:2, name:'Víctor Valdés', emoji:'🧤', club:'FC Barcelona', era:'Clásico', pos:'POR', price:40e6, rating:88, nation:'🇪🇸', years:'2002–2014'},
+  {id:3, name:'Jan Oblak', emoji:'🧤', club:'Atlético Madrid', era:'Actual', pos:'POR', price:70e6, rating:94, nation:'🇸🇮', years:'2014–hoy'},
+  {id:4, name:'Thibaut Courtois', emoji:'🧤', club:'Real Madrid', era:'Actual', pos:'POR', price:65e6, rating:93, nation:'🇧🇪', years:'2018–hoy'},
+  {id:5, name:'Andoni Zubizarreta', emoji:'🧤', club:'Athletic/Barça/Valencia', era:'Leyenda', pos:'POR', price:30e6, rating:87, nation:'🇪🇸', years:'1981–1998'},
+
+  {id:10, name:'Sergio Ramos', emoji:'🛡️', club:'Real Madrid', era:'Clásico', pos:'DEF', price:80e6, rating:94, nation:'🇪🇸', years:'2005–2021'},
+  {id:11, name:'Carles Puyol', emoji:'🛡️', club:'FC Barcelona', era:'Clásico', pos:'DEF', price:60e6, rating:93, nation:'🇪🇸', years:'1999–2014'},
+  {id:12, name:'Roberto Carlos', emoji:'🛡️', club:'Real Madrid', era:'Leyenda', pos:'DEF', price:55e6, rating:92, nation:'🇧🇷', years:'1996–2007'},
+  {id:13, name:'Ronald Koeman', emoji:'🛡️', club:'FC Barcelona', era:'Leyenda', pos:'DEF', price:30e6, rating:88, nation:'🇳🇱', years:'1989–1995'},
+  {id:14, name:'Dani Carvajal', emoji:'🛡️', club:'Real Madrid', era:'Actual', pos:'DEF', price:50e6, rating:88, nation:'🇪🇸', years:'2013–hoy'},
+  {id:15, name:'Jordi Alba', emoji:'🛡️', club:'FC Barcelona', era:'Actual', pos:'DEF', price:35e6, rating:87, nation:'🇪🇸', years:'2012–2023'},
+  {id:16, name:'Ferran Torres', emoji:'🛡️', club:'FC Barcelona', era:'Actual', pos:'DEF', price:40e6, rating:82, nation:'🇪🇸', years:'2022–hoy'},
+  {id:17, name:'Michel Salgado', emoji:'🛡️', club:'Real Madrid', era:'Clásico', pos:'DEF', price:25e6, rating:83, nation:'🇪🇸', years:'1998–2004'},
+  {id:18, name:'Héctor Bellerín', emoji:'🛡️', club:'Real Betis', era:'Actual', pos:'DEF', price:20e6, rating:80, nation:'🇪🇸', years:'2020–2023'},
+
+  {id:20, name:'Xavi Hernández', emoji:'🎯', club:'FC Barcelona', era:'Clásico', pos:'MED', price:75e6, rating:96, nation:'🇪🇸', years:'1998–2015'},
+  {id:21, name:'Andrés Iniesta', emoji:'🎯', club:'FC Barcelona', era:'Clásico', pos:'MED', price:80e6, rating:97, nation:'🇪🇸', years:'2002–2018'},
+  {id:22, name:'Luka Modric', emoji:'🎯', club:'Real Madrid', era:'Actual', pos:'MED', price:70e6, rating:95, nation:'🇭🇷', years:'2012–hoy'},
+  {id:23, name:'Luis Figo', emoji:'🎯', club:'Real Madrid', era:'Leyenda', pos:'MED', price:60e6, rating:93, nation:'🇵🇹', years:'2000–2005'},
+  {id:24, name:'Pedri', emoji:'🎯', club:'FC Barcelona', era:'Actual', pos:'MED', price:100e6, rating:91, nation:'🇪🇸', years:'2020–hoy'},
+  {id:25, name:'Fede Valverde', emoji:'🎯', club:'Real Madrid', era:'Actual', pos:'MED', price:90e6, rating:90, nation:'🇺🇾', years:'2018–hoy'},
+  {id:26, name:'Gavi', emoji:'🎯', club:'FC Barcelona', era:'Actual', pos:'MED', price:90e6, rating:89, nation:'🇪🇸', years:'2021–hoy'},
+  {id:27, name:'Santi Cazorla', emoji:'🎯', club:'Villarreal/Arsenal', era:'Clásico', pos:'MED', price:35e6, rating:89, nation:'🇪🇸', years:'2011–2022'},
+  {id:28, name:'Bernd Schuster', emoji:'🎯', club:'Barça/Atleti/RM', era:'Leyenda', pos:'MED', price:30e6, rating:89, nation:'🇩🇪', years:'1980–1990'},
+  {id:29, name:'Dani Parejo', emoji:'🎯', club:'Valencia/Villarreal', era:'Actual', pos:'MED', price:30e6, rating:85, nation:'🇪🇸', years:'2014–hoy'},
+
+  {id:40, name:'Lionel Messi', emoji:'⭐', club:'FC Barcelona', era:'Clásico', pos:'DEL', price:200e6, rating:99, nation:'🇦🇷', years:'2004–2021'},
+  {id:41, name:'Cristiano Ronaldo', emoji:'⭐', club:'Real Madrid', era:'Clásico', pos:'DEL', price:180e6, rating:98, nation:'🇵🇹', years:'2009–2018'},
+  {id:42, name:'Ronaldo Nazário', emoji:'⭐', club:'Real Madrid', era:'Leyenda', pos:'DEL', price:120e6, rating:97, nation:'🇧🇷', years:'1996–2002'},
+  {id:43, name:'Raúl González', emoji:'⭐', club:'Real Madrid', era:'Leyenda', pos:'DEL', price:80e6, rating:94, nation:'🇪🇸', years:'1994–2010'},
+  {id:44, name:'Hugo Sánchez', emoji:'⭐', club:'Real Madrid', era:'Leyenda', pos:'DEL', price:60e6, rating:92, nation:'🇲🇽', years:'1985–1992'},
+  {id:45, name:'Kylian Mbappé', emoji:'⭐', club:'Real Madrid', era:'Actual', pos:'DEL', price:200e6, rating:95, nation:'🇫🇷', years:'2024–hoy'},
+  {id:46, name:'Karim Benzema', emoji:'⭐', club:'Real Madrid', era:'Actual', pos:'DEL', price:80e6, rating:93, nation:'🇫🇷', years:'2009–2023'},
+  {id:47, name:'Vinicius Jr.', emoji:'⭐', club:'Real Madrid', era:'Actual', pos:'DEL', price:180e6, rating:93, nation:'🇧🇷', years:'2018–hoy'},
+  {id:48, name:'Rivaldo', emoji:'⭐', club:'FC Barcelona', era:'Leyenda', pos:'DEL', price:70e6, rating:93, nation:'🇧🇷', years:'1997–2002'},
+  {id:49, name:'Romário', emoji:'⭐', club:'FC Barcelona', era:'Leyenda', pos:'DEL', price:65e6, rating:93, nation:'🇧🇷', years:'1993–1995'},
+  {id:50, name:'Hristo Stoichkov', emoji:'⭐', club:'FC Barcelona', era:'Leyenda', pos:'DEL', price:50e6, rating:91, nation:'🇧🇬', years:'1990–1998'},
+  {id:51, name:'Samuel Etoo', emoji:'⭐', club:'FC Barcelona', era:'Clásico', pos:'DEL', price:55e6, rating:91, nation:'🇨🇲', years:'2004–2009'},
+  {id:52, name:'David Villa', emoji:'⭐', club:'Valencia/Barça/Atleti', era:'Clásico', pos:'DEL', price:45e6, rating:89, nation:'🇪🇸', years:'2003–2017'},
+  {id:53, name:'Robert Lewandowski', emoji:'⭐', club:'FC Barcelona', era:'Actual', pos:'DEL', price:50e6, rating:91, nation:'🇵🇱', years:'2022–hoy'},
+];
+
+const FORMATION_SLOTS = [
+  [{pos:'POR',label:'POR'}],
+  [{pos:'DEF',label:'LD'},{pos:'DEF',label:'CD'},{pos:'DEF',label:'CD'},{pos:'DEF',label:'LI'}],
+  [{pos:'MED',label:'MCD'},{pos:'MED',label:'MC'},{pos:'MED',label:'MCO'}],
+  [{pos:'DEL',label:'EI'},{pos:'DEL',label:'DC'},{pos:'DEL',label:'ED'}],
+];
+
+let team = Array(11).fill(null);
+let activePos = 'ALL';
+let activeEra = 'ALL';
+let searchQ = '';
+
+function fmt(n) {
+  if (n >= 1e6) return (n/1e6).toFixed(0) + 'M €';
+  return n.toLocaleString('es-ES') + ' €';
+}
+function fmtFull(n) { return n.toLocaleString('es-ES') + ' €'; }
+
+function getSlotIndex() {
+  let i = 0;
+  for (const row of FORMATION_SLOTS) {
+    for (const s of row) { i++; }
+  }
+}
+
+function flatSlots() {
+  const r = [];
+  FORMATION_SLOTS.forEach(row => row.forEach(s => r.push(s)));
+  return r;
+}
+
+function getSpent() { return team.reduce((s,p)=>s+(p?p.price:0),0); }
+
+function getSlotForPos(pos) {
+  const slots = flatSlots();
+  for (let i = 0; i < slots.length; i++) {
+    if (slots[i].pos === pos && team[i] === null) return i;
+  }
+  return null;
+}
+
+function renderPitch() {
+  const f = document.getElementById('formation');
+  f.style.cssText = 'display:flex;flex-direction:column;justify-content:space-around;height:100%;padding:4px 0;position:relative;z-index:1;';
+  f.innerHTML = '';
+  let idx = 0;
+  FORMATION_SLOTS.forEach(row => {
+    const rowDiv = document.createElement('div');
+    rowDiv.className = 'formation-row';
+    row.forEach(slotDef => {
+      const i = idx++;
+      const p = team[i];
+      const color = POS_COLOR[slotDef.pos] || '#888';
+      const div = document.createElement('div');
+      div.className = 'slot';
+      div.innerHTML = `
+        <div class="slot-pos">${slotDef.label}</div>
+        <div class="slot-circle ${p?'filled':''}" style="${p?'border-color:'+color+';background:'+color+'22':''}" onclick="slotClick(${i})">
+          <span style="font-size:22px">${p ? p.emoji : '<span style=opacity:.3>+</span>'}</span>
+          ${p ? `<span class="remove" onclick="removePlayer(${i},event)">×</span>` : ''}
+        </div>
+        <div class="slot-name">${p ? p.nation+' '+p.name : ''}</div>
+        <div class="slot-price">${p ? fmt(p.price) : ''}</div>
+      `;
+      rowDiv.appendChild(div);
+    });
+    f.appendChild(rowDiv);
+  });
+}
+
+function slotClick(i) {
+  const slots = flatSlots();
+  if (!team[i]) showToast('Elige un jugador del panel de la derecha 👉');
+}
+
+function removePlayer(i, e) {
+  e.stopPropagation();
+  team[i] = null;
+  update();
+}
+
+function pickPlayer(id) {
+  const player = PLAYERS.find(p=>p.id===id);
+  if (!player) return;
+  const spent = getSpent();
+  if (spent + player.price > BUDGET) { showToast('¡Sin presupuesto! Elimina algún jugador primero 💸'); return; }
+  const slot = getSlotForPos(player.pos);
+  if (slot === null) { showToast('No hay hueco libre para esa posición'); return; }
+  team[slot] = player;
+  update();
+}
+
+function update() {
+  updateBudget();
+  renderPitch();
+  renderList();
+}
+
+function updateBudget() {
+  const spent = getSpent();
+  const left = BUDGET - spent;
+  const count = team.filter(Boolean).length;
+
+  const lEl = document.getElementById('budgetLeft');
+  lEl.textContent = fmtFull(left);
+  lEl.className = 'b-value ' + (left > 100e6 ? 'ok' : left > 20e6 ? 'warn' : 'danger');
+
+  document.getElementById('budgetSpent').textContent = fmtFull(spent);
+  document.getElementById('playerCount').textContent = count + ' / 11';
+
+  const avg = count > 0 ? Math.round(team.filter(Boolean).reduce((s,p)=>s+p.rating,0)/count) : null;
+  document.getElementById('teamRating').textContent = avg ? avg : '—';
+  document.getElementById('teamRating2').textContent = avg ? '⭐ ' + avg + '/100' : '⭐ —';
+
+  if (count === 11) {
+    document.getElementById('teamPreview').textContent = team.map(p=>p.nation+' '+p.name.split(' ')[0]).join(' · ');
+  } else {
+    document.getElementById('teamPreview').textContent = `Selecciona ${11-count} jugadores más para completar tu XI`;
+  }
+}
+
+function renderList() {
+  const selectedIds = new Set(team.filter(Boolean).map(p=>p.id));
+  const spent = getSpent();
+  let list = PLAYERS;
+  if (activePos !== 'ALL') list = list.filter(p=>p.pos===activePos);
+  if (activeEra !== 'ALL') list = list.filter(p=>p.era===activeEra);
+  if (searchQ) list = list.filter(p=>p.name.toLowerCase().includes(searchQ)||p.club.toLowerCase().includes(searchQ));
+  list.sort((a,b)=>b.rating-a.rating);
+
+  const el = document.getElementById('playersList');
+  el.innerHTML = list.map(p => {
+    const isSelected = selectedIds.has(p.id);
+    const canAfford = (BUDGET - spent - (isSelected ? 0 : p.price)) >= 0;
+    const disabled = !isSelected && !canAfford;
+    const eraClass = 'era-' + p.era.toLowerCase().replace('á','a').replace('é','e').replace('ó','o');
+    return `<div class="pcard ${isSelected?'selected':''} ${disabled?'disabled':''}"
+      onclick="${disabled||isSelected?'':('pickPlayer('+p.id+')')}">
+      <div class="pcard-emoji">${p.emoji}</div>
+      <div class="pcard-info">
+        <div class="pcard-name">${p.nation} ${p.name} <span class="era-badge ${eraClass}">${p.era}</span></div>
+        <div class="pcard-meta">${p.club} · ${p.years}</div>
+      </div>
+      <div class="pcard-right">
+        <div class="pcard-price">${fmt(p.price)}</div>
+        <div class="pcard-rating">${p.rating} ⭐ · ${p.pos}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function shareTeam() {
+  const count = team.filter(Boolean).length;
+  if (count < 11) { showToast('¡Completa tu XI primero! Faltan ' + (11-count) + ' jugadores'); return; }
+  const names = team.map(p=>p.name).join(', ');
+  const spent = getSpent();
+  const avg = Math.round(team.filter(Boolean).reduce((s,p)=>s+p.rating,0)/11);
+  const txt = `Mi XI del Hall of Fame de La Liga:\n${names}\n\nPresupuesto gastado: ${fmtFull(spent)} de 500.000.000 €\nValoración media: ${avg}/100\n\n¿Qué te parece este equipo? ¿Es el mejor XI posible de la historia de La Liga?`;
+  navigator.clipboard.writeText(txt).then(()=>showToast('¡Copiado! Compártelo con tus compañeros 🏆')).catch(()=>showToast('¡XI completado! Valoración: '+avg+'/100'));
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+document.querySelectorAll('#posFilters .f-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    activePos = b.dataset.pos;
+    document.querySelectorAll('#posFilters .f-btn').forEach(x=>x.classList.toggle('active',x===b));
+    renderList();
+  });
+});
+
+document.querySelectorAll('#eraFilters .f-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    activeEra = b.dataset.era;
+    document.querySelectorAll('#eraFilters .f-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    renderList();
+  });
+});
+
+document.getElementById('searchBox').addEventListener('input',e=>{
+  searchQ = e.target.value.toLowerCase();
+  renderList();
+});
+
+update();
+</script>
+</body>
+</html>
